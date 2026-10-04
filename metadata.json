@@ -1,0 +1,6 @@
+{
+  "name": "ReZone Patholab – Precision Pathology & Diagnostics",
+  "description": "CAP & NABL Dual-Certified Precision Pathology with 45-minute home sample collection, 99.98% diagnostic accuracy, and interactive digital biometric reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
