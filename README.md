@@ -18,7 +18,7 @@ ReZone Patholab brings these activities into a centralized digital platform.
 
 ### Core Workflow
 
-``text
+```text
                     ┌─────────────────┐
                     │     PATIENT     │
                     └────────┬────────┘
@@ -53,7 +53,7 @@ ReZone Patholab brings these activities into a centralized digital platform.
                     │     REPORT      │
                     │    APPROVED     │
                     └─────────────────┘
-`
+```
 
 ---
 
@@ -94,7 +94,7 @@ The collector interface is designed to manage the sample collection stage of the
 
 ### Sample lifecycle
 
-`text
+```text
 BOOKED
    │
    ▼
@@ -102,7 +102,7 @@ COLLECTED
    │
    ▼
 APPROVED
-
+```
 
 This creates a clear state transition between patient booking, physical sample collection, and medical approval.
 
@@ -189,7 +189,7 @@ The core database consists of two primary application tables.
 
 Stores authenticated user information and application roles.
 
-`text
+```text
 profiles
 ├── id
 ├── name
@@ -197,15 +197,15 @@ profiles
 ├── phone
 ├── role
 └── created_at
-
+```
 
 Supported roles:
 
-`text
+```text
 patient
 collector
 doctor
-
+```
 
 ---
 
@@ -213,7 +213,7 @@ doctor
 
 Stores pathology test bookings and their lifecycle.
 
-`text
+```text
 bookings
 ├── id
 ├── specimen_id
@@ -230,13 +230,13 @@ bookings
 ├── approved_at
 ├── result_values
 └── remarks
-
+```
 
 Booking states:
 
-`text
+```text
 booked → collected → approved
-
+```
 
 ---
 
@@ -252,17 +252,17 @@ Returns the authenticated user's application role.
 
 Allows authorized laboratory staff to transition a booking from:
 
-text
+```text
 booked → collected
-``
+```
 
 ### `approve_report()`
 
 Allows doctors to transition a booking from:
 
-``text
+```text
 collected → approved
-`
+```
 
 while storing:
 
@@ -590,7 +590,7 @@ The database prevents arbitrary role assignment from the public client.
 
 Start the development server:
 
-bash
+```bash
 npm run dev
 ```
 
@@ -598,9 +598,9 @@ The project's Vite configuration runs the development server on port `3000`.
 
 Open:
 
-`text
+```text
 http://localhost:3000
-
+```
 
 ---
 
@@ -640,7 +640,7 @@ Important workflow transitions are not exposed as unrestricted client-side updat
 
 For example:
 
-`
+```text
 BOOKED
    ↓
 approve_collection()
@@ -650,7 +650,7 @@ COLLECTED
 approve_report()
    ↓
 APPROVED
-``
+```
 
 ### Credential Protection
 
@@ -678,7 +678,7 @@ The project uses Tailwind CSS for utility-based styling and Lucide React for int
 
 # 📊 System Architecture
 
-``
+```text
                     ┌─────────────────────┐
                     │      React UI       │
                     │   TypeScript/Vite   │
@@ -708,7 +708,7 @@ The project uses Tailwind CSS for utility-based styling and Lucide React for int
                     │    profiles         │
                     │    bookings         │
                     └─────────────────────┘
-`
+```
 
 ---
 
@@ -728,9 +728,9 @@ Security-sensitive operations are enforced at the database layer instead of trus
 
 Laboratory bookings move through clearly defined states:
 
-`
+```text
 BOOKED → COLLECTED → APPROVED
-
+```
 
 ### Reusable Components
 
@@ -792,7 +792,7 @@ For a complete local test, use three test accounts:
 
 ### Patient
 
-`
+```text
 Register
    ↓
 Login
@@ -800,11 +800,11 @@ Login
 Book a test
    ↓
 Check booking status
-
+```
 
 ### Collector
 
-``
+```text
 Login
    ↓
 Open collector dashboard
@@ -814,11 +814,11 @@ Find booked specimen
 Approve collection
    ↓
 Status becomes COLLECTED
-`
+```
 
 ### Doctor
 
-``
+```text
 Login
    ↓
 Open doctor dashboard
@@ -830,17 +830,17 @@ Enter results
 Add remarks
    ↓
 Approve report
-`
+```
 
 ### Patient
 
-``
+```text
 Login again
    ↓
 Open booking
    ↓
 View approved report
-`
+```
 
 This verifies the complete end-to-end workflow.
 
@@ -852,23 +852,23 @@ Contributions are welcome.
 
 ### Fork the repository
 
-`
+```bash
 git fork
-``
+```
 
 Or fork it directly from GitHub.
 
 ### Clone your fork
 
-``
+```bash
 git clone https://github.com/YOUR_USERNAME/Rezone-Patholab.git
-`
+```
 
 ### Create a feature branch
 
-``bash
+```bash
 git checkout -b feature/your-feature
-`
+```
 
 ### Make your changes
 
@@ -876,16 +876,16 @@ Test the application locally before committing.
 
 ### Commit
 
-`bash
+```bash
 git add .
 git commit -m "feat: add your feature"
-
+```
 
 ### Push
 
-``bash
+```bash
 git push origin feature/your-feature
-
+```
 
 Then open a Pull Request.
 
