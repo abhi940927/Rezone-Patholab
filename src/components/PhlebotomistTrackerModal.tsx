@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getWhatsAppUrl, PHONE_NUMBER } from '../utils/whatsapp';
+import { BookingStatusCard } from './BookingStatusCard';
 
 interface PhlebotomistTrackerModalProps {
   isOpen: boolean;
@@ -56,6 +57,12 @@ export const PhlebotomistTrackerModal: React.FC<PhlebotomistTrackerModalProps> =
             </p>
           </div>
         </div>
+
+        {bookingId && (
+          <div className="mb-3.5">
+            <BookingStatusCard bookingId={bookingId} />
+          </div>
+        )}
 
         {/* Live Map Representation */}
         <div className="relative w-full h-44 rounded-xl overflow-hidden bg-[#e2e7ff] border border-[#dae2fd] flex items-center justify-center">

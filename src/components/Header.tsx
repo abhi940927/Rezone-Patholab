@@ -29,8 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Top Banner */}
       <div className="w-full bg-[#007a78] text-white py-1 px-4 md:px-8 flex items-center justify-between text-[11px] md:text-xs font-semibold tracking-wide border-b border-[#005f5e]">
         <div className="flex items-center gap-2 mx-auto md:mx-0">
-          <span className="material-symbols-outlined text-sm text-[#6ffbbe] animate-pulse">bolt</span>
-          <span>Smart Home Sample Collection in 45 Mins across Metro Areas • NABL & CAP Accredited</span>
+          <span className="material-symbols-outlined text-sm text-[#6ffbbe] animate-pulse">location_on</span>
+          <span>Lab Location: BDO block club road near parwati chandra hotel, Arrah, Bihar - 802301 • Home Collection ONLY for Pincode 802301</span>
         </div>
         <div className="hidden md:flex items-center gap-4 text-white/90">
           <a
@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="material-symbols-outlined text-sm">verified</span>
             ISO 15189:2022 Certified
           </span>
-          <a href="tel:+919905359191" className="flex items-center gap-1 hover:text-white transition-colors">
+          <a href="tel:+919279816571" className="flex items-center gap-1 hover:text-white transition-colors">
             <span className="material-symbols-outlined text-sm">support_agent</span>
             <span>Support: {PHONE_DISPLAY}</span>
           </a>
@@ -117,7 +117,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
             {/* Phone Badge */}
             <a 
-              href="tel:+919905359191"
+              href="tel:+919279816571"
               className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#cce5ff] text-[#001d31] text-xs font-semibold hover:bg-[#93ccff] transition-colors"
             >
               <span className="material-symbols-outlined text-sm text-[#006398]">call</span>
@@ -168,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="xl:hidden bg-white/98 backdrop-blur-2xl border-b border-[#eaedff] px-5 py-4 space-y-3 shadow-xl animate-in slide-in-from-top duration-200">
           <div className="grid grid-cols-3 gap-2 pb-2 border-b border-[#f2f3ff]">
             <a 
-              href="tel:+919905359191"
+              href="tel:+919279816571"
               className="flex items-center justify-center gap-1 p-2 rounded-lg bg-[#cce5ff] text-[#001d31] text-[11px] font-bold"
             >
               <span className="material-symbols-outlined text-sm text-[#006398]">call</span>

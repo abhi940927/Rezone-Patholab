@@ -36,8 +36,22 @@ export const Footer: React.FC<FooterProps> = ({
             </div>
             
             <p className="text-xs md:text-sm text-[#3e4948] max-w-md leading-relaxed">
-              Precision diagnostic intelligence trusted by over 10,000 clinicians and medical institutions nationwide. Operating advanced molecular pathology and round-the-clock rapid diagnostics with automated chain-of-custody.
+              Precision diagnostic intelligence operating advanced molecular pathology and round-the-clock rapid diagnostics with automated cold-chain custody.
             </p>
+
+            <div className="p-3 bg-white rounded-xl border border-[#dae2fd] text-xs space-y-1">
+              <div className="flex items-center gap-1.5 font-bold text-[#005f5e]">
+                <span className="material-symbols-outlined text-base">location_on</span>
+                <span>Our Laboratory Location:</span>
+              </div>
+              <p className="text-[#131b2e] font-semibold text-[11px] leading-snug">
+                BDO block club road near parwati chandra hotel, Arrah, Bihar - 802301, India
+              </p>
+              <div className="pt-1 text-[10px] text-emerald-800 font-bold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                <span>Doorstep Home Collection: Strictly available for Pincode 802301 only</span>
+              </div>
+            </div>
 
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#dae2fd] text-[#005f5e] text-[10px] font-bold">
@@ -122,7 +136,7 @@ export const Footer: React.FC<FooterProps> = ({
                 </button>
               </li>
               <li>
-                <a href="tel:+919905359191" className="hover:text-[#005f5e] transition-colors text-left flex items-center gap-1">
+                <a href="tel:+919279816571" className="hover:text-[#005f5e] transition-colors text-left flex items-center gap-1">
                   <span>Support: {PHONE_DISPLAY}</span>
                 </a>
               </li>

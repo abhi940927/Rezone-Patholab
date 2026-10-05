@@ -2,13 +2,17 @@ import React, { useState } from 'react';
 import { DEMO_PATIENT_REPORT } from '../data/mockData';
 import { printOrSaveReportPdf, downloadReportFile } from '../utils/reportPdf';
 import { getWhatsAppUrl, WHATSAPP_DISPLAY } from '../utils/whatsapp';
+import { Booking, buildReport } from '../utils/store';
+import { BookingStatusCard } from './BookingStatusCard';
 
 interface ReportViewerModalProps {
   isOpen: boolean;
   onClose: () => void;
+  booking?: Booking | null;
 }
 
-export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, onClose }) => {
+export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, onClose, booking }) => {
+  const report = booking && booking.status === 'approved' ? buildReport(booking) : DEMO_PATIENT_REPORT;
   const [patientQuery, setPatientQuery] = useState('RZ-88219-METRO');
   const [dob, setDob] = useState('1982-05-14');
   const [isVerified, setIsVerified] = useState(false);
@@ -25,12 +29,12 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
 
   const handlePrintOrSavePdf = async () => {
     setPrintSuccessNotice('Print / Save as PDF dialog initiated. In the print dialog, select "Save as PDF" to save directly.');
-    await printOrSaveReportPdf(DEMO_PATIENT_REPORT);
+    await printOrSaveReportPdf(report);
     setTimeout(() => setPrintSuccessNotice(null), 7000);
   };
 
   const handleDownloadFile = () => {
-    downloadReportFile(DEMO_PATIENT_REPORT);
+    downloadReportFile(report);
     setPrintSuccessNotice('Report document downloaded (ReZone_Pathology_Report_RZ-99420-BIO.html).');
     setTimeout(() => setPrintSuccessNotice(null), 5000);
   };
@@ -88,7 +92,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
               {printSuccessNotice}
             </span>
             <span className="text-[11px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded font-mono">
-              Specimen: {DEMO_PATIENT_REPORT.specimenId}
+              Specimen: {report.specimenId}
             </span>
           </div>
         )}
@@ -96,7 +100,12 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
 
         {/* Content Area */}
         <div className="overflow-y-auto flex-1 py-4 pr-1">
-          {!isVerified ? (
+          {booking && booking.status !== 'approved' ? (
+            <div className="p-4 sm:p-6 space-y-3">
+              <h3 className="text-lg font-bold text-[#131b2e]">Your report is being prepared</h3>
+              <BookingStatusCard bookingId={booking.id} />
+            </div>
+          ) : !isVerified && !booking ? (
             <div className="max-w-md mx-auto py-6 space-y-4">
               <div className="text-center space-y-1">
                 <div className="w-12 h-12 bg-[#cce5ff] text-[#006398] rounded-full flex items-center justify-center mx-auto mb-2">
@@ -180,7 +189,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
                     <span className="material-symbols-outlined text-[#006242] text-base">ac_unit</span>
                     <div>
                       <div className="text-[10px] text-[#6e7978]">IoT Cold Chain Vault</div>
-                      <div className="text-xs font-bold text-[#006242]">{DEMO_PATIENT_REPORT.coldChainTemperature}°C (Continuous 2-8°C Verified)</div>
+                      <div className="text-xs font-bold text-[#006242]">{report.coldChainTemperature}°C (Continuous 2-8°C Verified)</div>
                     </div>
                   </div>
                 </div>
@@ -189,19 +198,19 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                   <div>
                     <span className="text-[10px] text-[#6e7978] block">Patient Name:</span>
-                    <strong className="text-[#131b2e]">{DEMO_PATIENT_REPORT.patientName}</strong> ({DEMO_PATIENT_REPORT.age}Y / {DEMO_PATIENT_REPORT.gender})
+                    <strong className="text-[#131b2e]">{report.patientName}</strong> ({report.age}Y / {report.gender})
                   </div>
                   <div>
                     <span className="text-[10px] text-[#6e7978] block">Specimen Barcode:</span>
-                    <strong className="text-[#005f5e] font-mono">{DEMO_PATIENT_REPORT.specimenId}</strong>
+                    <strong className="text-[#005f5e] font-mono">{report.specimenId}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-[#6e7978] block">Collection Time:</span>
-                    <span className="text-[#131b2e]">{DEMO_PATIENT_REPORT.collectionTime}</span>
+                    <span className="text-[#131b2e]">{report.collectionTime}</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-[#6e7978] block">Dual-Auth Pathologists:</span>
-                    <span className="text-[#006398] font-medium">{DEMO_PATIENT_REPORT.pathologist}</span>
+                    <span className="text-[#006398] font-medium">{report.pathologist}</span>
                   </div>
                 </div>
               </div>
@@ -256,7 +265,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
               {activeTab === 'summary' && (
                 <div className="space-y-3">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {DEMO_PATIENT_REPORT.biomarkers.map((item, idx) => (
+                    {report.biomarkers.map((item, idx) => (
                       <div 
                         key={idx}
                         onClick={() => setSelectedBiomarker(idx)}
@@ -313,7 +322,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
                   <div className="flex justify-between items-center">
                     <div>
                       <h4 className="text-sm font-bold text-[#131b2e]">
-                        {DEMO_PATIENT_REPORT.biomarkers[selectedBiomarker].name} (Historical Trend)
+                        {report.biomarkers[selectedBiomarker].name} (Historical Trend)
                       </h4>
                       <p className="text-xs text-[#6e7978]">
                         Longitudinal biological variance over 36 months of annual checkups.
@@ -324,7 +333,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
                       onChange={(e) => setSelectedBiomarker(Number(e.target.value))}
                       className="px-2.5 py-1.5 bg-[#f2f3ff] rounded-lg text-xs font-semibold text-[#131b2e] border border-[#eaedff]"
                     >
-                      {DEMO_PATIENT_REPORT.biomarkers.map((b, i) => (
+                      {report.biomarkers.map((b, i) => (
                         <option key={i} value={i}>{b.name}</option>
                       ))}
                     </select>
@@ -332,14 +341,14 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
 
                   {/* Trend chart visualizer */}
                   <div className="h-44 w-full bg-[#f2f3ff] rounded-xl p-4 flex items-end justify-around gap-4 border border-[#eaedff]">
-                    {DEMO_PATIENT_REPORT.biomarkers[selectedBiomarker].historicalTrend.map((pt, i) => (
+                    {report.biomarkers[selectedBiomarker].historicalTrend.map((pt, i) => (
                       <div key={i} className="flex flex-col items-center gap-1 h-full justify-end flex-1 max-w-[80px]">
                         <span className="text-xs font-mono font-bold text-[#005f5e]">
-                          {pt.value} {DEMO_PATIENT_REPORT.biomarkers[selectedBiomarker].unit}
+                          {pt.value} {report.biomarkers[selectedBiomarker].unit}
                         </span>
                         <div 
                           className="w-full bg-[#005f5e] hover:bg-[#007a78] rounded-t-lg transition-all"
-                          style={{ height: `${(pt.value / (DEMO_PATIENT_REPORT.biomarkers[selectedBiomarker].maxNormal * 1.2)) * 100}%` }}
+                          style={{ height: `${(pt.value / (report.biomarkers[selectedBiomarker].maxNormal * 1.2)) * 100}%` }}
                         />
                         <span className="text-[11px] font-bold text-[#3e4948] mt-1">{pt.year}</span>
                       </div>
@@ -362,9 +371,9 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div className="p-3 bg-[#f2f3ff] rounded-lg border border-[#dae2fd]">
-                      <div className="text-[10px] text-[#6e7978] uppercase tracking-wider font-bold">Primary Pathologist</div>
-                      <div className="font-bold text-sm text-[#131b2e] mt-1">Dr. Aris Thorne, MD Path</div>
-                      <div className="text-[11px] text-[#3e4948]">Head of Molecular Oncology & Hematology</div>
+                      <div className="text-[10px] text-[#6e7978] uppercase tracking-wider font-bold">Primary Pathologist & Lab Director</div>
+                      <div className="font-bold text-sm text-[#131b2e] mt-1">Dr. Anil Kumar Singh, MD Path</div>
+                      <div className="text-[11px] text-[#3e4948]">Chief Clinical Pathologist & Laboratory Director</div>
                       <div className="text-[10px] text-[#006398] font-mono mt-2">Digital Signature: [AUTH-HASH-992140A-HEX]</div>
                     </div>
 
@@ -425,7 +434,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#eaedff]">
-                        {DEMO_PATIENT_REPORT.biomarkers.map((b, idx) => (
+                        {report.biomarkers.map((b, idx) => (
                           <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-[#faf8ff]'}>
                             <td className="p-2.5">
                               <span className="font-bold text-[#131b2e]">{b.name}</span>
@@ -452,9 +461,9 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
                   {/* Doctor Signatures */}
                   <div className="pt-4 border-t border-[#dae2fd] grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                     <div>
-                      <div className="font-serif italic text-base text-[#131b2e] border-b border-slate-400 pb-1 w-44">Dr. Aris Thorne</div>
-                      <div className="font-bold text-[#005f5e] mt-1">Dr. Aris Thorne, MD Path</div>
-                      <div className="text-[10px] text-[#6e7978]">Head of Molecular Pathology • Reg: DMC-68192</div>
+                      <div className="font-serif italic text-base text-[#131b2e] border-b border-slate-400 pb-1 w-44">Dr. Anil Kumar Singh</div>
+                      <div className="font-bold text-[#005f5e] mt-1">Dr. Anil Kumar Singh, MD Path</div>
+                      <div className="text-[10px] text-[#6e7978]">Chief Clinical Pathologist & Lab Director • Reg: DMC-68192</div>
                     </div>
                     <div className="sm:text-right">
                       <div className="font-serif italic text-base text-[#131b2e] border-b border-slate-400 pb-1 w-44 sm:ml-auto">Dr. Sarah Chen</div>
@@ -473,7 +482,7 @@ export const ReportViewerModal: React.FC<ReportViewerModalProps> = ({ isOpen, on
           <div className="flex items-center gap-3">
             <span>Encrypted HIPAA Session Active</span>
             <a
-              href={getWhatsAppUrl('Hello ReZone, I have an inquiry regarding my pathology report ' + DEMO_PATIENT_REPORT.specimenId)}
+              href={getWhatsAppUrl('Hello ReZone, I have an inquiry regarding my pathology report ' + report.specimenId)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#25D366] hover:underline font-bold flex items-center gap-1"

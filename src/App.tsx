@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { MobileBottomBar } from './components/MobileBottomBar';
 import { BookingModal } from './components/BookingModal';
 import { ReportViewerModal } from './components/ReportViewerModal';
+import { AccountMenu } from './components/AccountMenu';
+import { TestingNoticeModal } from './components/TestingNoticeModal';
 import { PrescriptionModal } from './components/PrescriptionModal';
 import { PhlebotomistTrackerModal } from './components/PhlebotomistTrackerModal';
 import { ParameterModal } from './components/ParameterModal';
@@ -17,6 +19,8 @@ import { WHATSAPP_DISPLAY, getWhatsAppUrl, getWhatsAppBookingUrl } from './utils
 export default function App() {
   // Modal states
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
+  const [noticeOpen, setNoticeOpen] = useState(true);
+  const [noticeFromBooking, setNoticeFromBooking] = useState(false);
   const [selectedPackageForBooking, setSelectedPackageForBooking] = useState<string | undefined>();
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
@@ -63,6 +67,14 @@ export default function App() {
   // Toast notification state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // While the site is in testing, show the notice again whenever someone opens online booking.
+  useEffect(() => {
+    if (bookingModalOpen || consultModalOpen) {
+      setNoticeFromBooking(true);
+      setNoticeOpen(true);
+    }
+  }, [bookingModalOpen, consultModalOpen]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -85,19 +97,21 @@ export default function App() {
     const code = pincodeInput.trim();
     if (!code) return;
 
-    const matched = SERVICEABLE_PINCODES[code];
-    if (matched) {
+    if (code === '802301') {
+      const matched = SERVICEABLE_PINCODES['802301'];
       setPincodeResult({
         text: `⚡ High Fleet Density: ${matched.phlebosActive} Phlebotomists active near ${matched.area} (${matched.city}). Guaranteed doorstep collection in ${matched.etaMins} mins.`,
-        isAvailable: true
+        isAvailable: true,
+        area: `${matched.area}, ${matched.city} - 802301`,
+        eta: matched.etaMins
       });
-      showToast(`Instant slot confirmed for ${code} (${matched.city})`);
+      showToast('Instant slot confirmed for 802301 (Arrah, Bihar)');
     } else {
       setPincodeResult({
-        text: `⚡ Serviceable Metro Area: 3 Phlebotomists active near postal code ${code}. Earliest collection in 38 mins.`,
-        isAvailable: true
+        text: `Doorstep home collection is ONLY available for pincode 802301 (Arrah, Bhojpur, Bihar). Pincode "${code}" is not acceptable.`,
+        isAvailable: false
       });
-      showToast(`Dispatch available for postal code ${code}`);
+      showToast(`Home collection not available for ${code}. Only 802301 is accepted.`);
     }
   };
 
@@ -311,7 +325,6 @@ export default function App() {
                                   <a
                                     href={getWhatsAppBookingUrl({
                                       packageName: test.name,
-                                      address: 'BDO block club road near parwati chandra hotel, Arrah, Bihar',
                                       pincode: '802301'
                                     })}
                                     target="_blank"
@@ -538,7 +551,6 @@ export default function App() {
                         href={getWhatsAppBookingUrl({
                           packageName: homeSectionPackage,
                           slot: homeSectionSlot === '45min' ? '45-Min Express Slot' : homeSectionSlot === 'morning' ? 'Morning Fasting (6:30 - 9:30 AM)' : 'Custom Slot',
-                          address: 'BDO block club road near parwati chandra hotel, Arrah, Bihar',
                           pincode: '802301'
                         })}
                         target="_blank"
@@ -877,7 +889,6 @@ export default function App() {
                         <a
                           href={getWhatsAppBookingUrl({
                             packageName: pkg.name,
-                            address: 'BDO block club road near parwati chandra hotel, Arrah, Bihar',
                             pincode: '802301'
                           })}
                           target="_blank"
@@ -986,7 +997,6 @@ export default function App() {
                           <a
                             href={getWhatsAppBookingUrl({
                               packageName: test.name,
-                              address: 'BDO block club road near parwati chandra hotel, Arrah, Bihar',
                               pincode: '802301'
                             })}
                             target="_blank"
@@ -1034,7 +1044,7 @@ export default function App() {
                     <span>Upload Doctor Prescription (Rx)</span>
                   </button>
                   <a
-                    href={getWhatsAppUrl(`Hello ReZone Patholab, I need to check availability of this test: "${searchQuery}" for address: BDO block club road near parwati chandra hotel, Arrah, Bihar (802301).`)}
+                    href={getWhatsAppUrl(`Hello ReZone Patholab, I need to check availability of this test: "${searchQuery}". Please confirm home collection for my address.`)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow flex items-center justify-center gap-1 cursor-pointer"
@@ -1167,7 +1177,6 @@ export default function App() {
                         <a
                           href={getWhatsAppBookingUrl({
                             packageName: pkg.name,
-                            address: 'BDO block club road near parwati chandra hotel, Arrah, Bihar',
                             pincode: '802301'
                           })}
                           target="_blank"
@@ -1727,9 +1736,9 @@ export default function App() {
                   Doorstep coverage verified for <strong className="text-[#6ffbbe] font-bold">BDO block club road near parwati chandra hotel, Arrah, Bihar (PIN 802301)</strong>. Enter your postal code to verify instant 45-minute sterile blood collection availability.
                 </p>
 
-                {/* Quick Area Shortcuts */}
+                {/* Quick Area Shortcuts & Strict 802301 Notice */}
                 <div className="flex items-center gap-2 flex-wrap pt-1">
-                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Quick Check:</span>
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Service Zone:</span>
                   <button
                     type="button"
                     onClick={() => {
@@ -1738,47 +1747,19 @@ export default function App() {
                       setPincodeResult({
                         text: `⚡ High Fleet Density: ${m.phlebosActive} Phlebotomists active near ${m.area} (${m.city}). Guaranteed doorstep collection in ${m.etaMins} mins.`,
                         isAvailable: true,
-                        area: m.area,
+                        area: `${m.area}, ${m.city} - 802301`,
                         eta: m.etaMins
                       });
                       showToast('Selected Bihar (802301) - 5 Phlebotomists Active');
                     }}
-                    className="px-2.5 py-1 rounded-full bg-white/20 hover:bg-white text-white hover:text-slate-900 font-bold text-xs transition-colors border border-white/30 cursor-pointer"
+                    className="px-3 py-1 rounded-full bg-emerald-500/20 hover:bg-emerald-500 text-white font-bold text-xs transition-colors border border-emerald-400/40 cursor-pointer flex items-center gap-1"
                   >
-                    📍 Bihar (802301 - Arrah)
+                    <span>📍 Bihar (802301 - Arrah Only)</span>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPincodeInput('110001');
-                      const m = SERVICEABLE_PINCODES['110001'];
-                      setPincodeResult({
-                        text: `⚡ High Fleet Density: ${m.phlebosActive} Phlebotomists active near ${m.area} (${m.city}). Guaranteed doorstep collection in ${m.etaMins} mins.`,
-                        isAvailable: true,
-                        area: m.area,
-                        eta: m.etaMins
-                      });
-                    }}
-                    className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-900 font-medium text-xs transition-colors border border-white/20 cursor-pointer"
-                  >
-                    Delhi (110001)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPincodeInput('400001');
-                      const m = SERVICEABLE_PINCODES['400001'];
-                      setPincodeResult({
-                        text: `⚡ High Fleet Density: ${m.phlebosActive} Phlebotomists active near ${m.area} (${m.city}). Guaranteed doorstep collection in ${m.etaMins} mins.`,
-                        isAvailable: true,
-                        area: m.area,
-                        eta: m.etaMins
-                      });
-                    }}
-                    className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white text-white hover:text-slate-900 font-medium text-xs transition-colors border border-white/20 cursor-pointer"
-                  >
-                    Mumbai (400001)
-                  </button>
+                  <span className="text-[11px] text-amber-200 bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                    ⚠️ Home collection is strictly restricted to 802301
+                  </span>
                 </div>
 
                 {/* Pin Code Check & WhatsApp Booking Form */}
@@ -1790,7 +1771,7 @@ export default function App() {
                         className="w-full pl-11 pr-4 py-3 rounded-xl bg-white text-slate-950 placeholder:text-slate-500 font-bold text-sm shadow-md focus:outline-none focus:ring-4 focus:ring-[#10b981]/40 border-2 border-white"
                         id="pincodeInput"
                         maxLength={6}
-                        placeholder="Enter 6-digit Pincode (e.g. 802301)"
+                        placeholder="Enter Pincode (802301 only)"
                         required
                         type="text"
                         value={pincodeInput}
@@ -1805,65 +1786,129 @@ export default function App() {
                       <span className="material-symbols-outlined text-base">bolt</span>
                     </button>
                     <a
-                      href={getWhatsAppBookingUrl({
-                        pincode: pincodeInput || '802301',
-                        slot: '45-Min Express Doorstep Visit'
-                      })}
-                      target="_blank"
+                      href={
+                        pincodeInput.trim() === '802301'
+                          ? getWhatsAppBookingUrl({
+                              pincode: '802301',
+                              slot: '45-Min Express Doorstep Visit'
+                            })
+                          : '#'
+                      }
+                      onClick={(e) => {
+                        if (pincodeInput.trim() !== '802301') {
+                          e.preventDefault();
+                          alert('Doorstep home collection is ONLY available for pincode 802301 (Arrah, Bihar). Other pincodes are not acceptable.');
+                        }
+                      }}
+                      target={pincodeInput.trim() === '802301' ? '_blank' : undefined}
                       rel="noopener noreferrer"
-                      className="px-4 py-3 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-extrabold text-sm shadow-lg whitespace-nowrap transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                      className={`px-4 py-3 rounded-xl text-white font-extrabold text-sm shadow-lg whitespace-nowrap transition-all flex items-center justify-center gap-1.5 active:scale-95 ${
+                        pincodeInput.trim() === '802301'
+                          ? 'bg-[#25D366] hover:bg-[#20ba59] cursor-pointer'
+                          : 'bg-slate-400 opacity-60 cursor-not-allowed'
+                      }`}
                     >
                       <span className="material-symbols-outlined text-base">chat</span>
                       <span>Book on WhatsApp</span>
                     </a>
                   </form>
 
-                  {/* Confirmed Slot Result Card - Ultra High Contrast & Clarity */}
+                  {/* Slot Result Card: Serviceable vs Unserviceable */}
                   {pincodeResult && (
-                    <div className="p-4 rounded-2xl bg-white text-slate-950 shadow-2xl border-2 border-emerald-400 animate-in fade-in space-y-2.5">
-                      <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
-                        <span className="flex items-center gap-1.5 text-xs font-black text-emerald-800">
-                          <span className="material-symbols-outlined text-lg text-emerald-600">verified</span>
-                          RAPID DOORSTEP FLEET ACTIVE IN YOUR AREA
-                        </span>
-                        <span className="text-[11px] font-bold bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full border border-emerald-300">
-                          ⚡ 28–45 Min ETA Guaranteed
-                        </span>
-                      </div>
+                    pincodeResult.isAvailable ? (
+                      <div className="p-4 rounded-2xl bg-white text-slate-950 shadow-2xl border-2 border-emerald-400 animate-in fade-in space-y-2.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-100">
+                          <span className="flex items-center gap-1.5 text-xs font-black text-emerald-800">
+                            <span className="material-symbols-outlined text-lg text-emerald-600">verified</span>
+                            RAPID DOORSTEP FLEET ACTIVE IN ARRAH, BIHAR (802301)
+                          </span>
+                          <span className="text-[11px] font-bold bg-emerald-100 text-emerald-900 px-2.5 py-0.5 rounded-full border border-emerald-300">
+                            ⚡ 28–45 Min ETA Guaranteed
+                          </span>
+                        </div>
 
-                      <div className="text-xs text-slate-800 space-y-1">
-                        <p className="font-semibold text-slate-900 leading-snug">
-                          {pincodeResult.text}
-                        </p>
-                        <p className="text-[11px] text-slate-600">
-                          📍 <strong>Assigned Location:</strong> {pincodeResult.area || 'BDO block club road near parwati chandra hotel, Arrah, Bihar - 802301'}
-                        </p>
-                      </div>
+                        <div className="text-xs text-slate-800 space-y-1">
+                          <p className="font-semibold text-slate-900 leading-snug">
+                            {pincodeResult.text}
+                          </p>
+                          <p className="text-[11px] text-slate-600">
+                            📍 <strong>Assigned Location:</strong> {pincodeResult.area || 'BDO block club road near parwati chandra hotel, Arrah, Bihar - 802301'}
+                          </p>
+                        </div>
 
-                      <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenBooking()}
-                          className="flex-1 px-4 py-2.5 rounded-xl bg-[#005f5e] hover:bg-[#007a78] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-sm">home_health</span>
-                          <span>Book Doorstep Visit Now</span>
-                        </button>
-                        <a
-                          href={getWhatsAppBookingUrl({
-                            address: 'BDO block club road near parwati chandra hotel',
-                            pincode: pincodeInput || '802301',
-                            slot: 'Instant 45-Min Express Home Collection'
-                          })}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer text-center"
-                        >
-                          <span className="material-symbols-outlined text-sm">chat</span>
-                          <span>Confirm on WhatsApp ({WHATSAPP_DISPLAY})</span>
-                        </a>
+                        <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenBooking()}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-[#005f5e] hover:bg-[#007a78] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-sm">home_health</span>
+                            <span>Book Doorstep Visit Now</span>
+                          </button>
+                          <a
+                            href={getWhatsAppBookingUrl({
+                              pincode: '802301',
+                              slot: 'Instant 45-Min Express Home Collection'
+                            })}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer text-center"
+                          >
+                            <span className="material-symbols-outlined text-sm">chat</span>
+                            <span>Confirm on WhatsApp ({WHATSAPP_DISPLAY})</span>
+                          </a>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="p-4 rounded-2xl bg-white text-slate-950 shadow-2xl border-2 border-red-500 animate-in fade-in space-y-2.5">
+                        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-red-100">
+                          <span className="flex items-center gap-1.5 text-xs font-black text-red-700">
+                            <span className="material-symbols-outlined text-lg text-red-600">cancel</span>
+                            OTHER PINCODES NOT ACCEPTABLE FOR HOME COLLECTION
+                          </span>
+                          <span className="text-[11px] font-bold bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full border border-red-300">
+                            Only Pincode 802301
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-slate-800 space-y-1">
+                          <p className="font-bold text-red-900 leading-snug">
+                            {pincodeResult.text}
+                          </p>
+                          <p className="text-[11px] text-slate-600">
+                            Our doorstep phlebotomy fleet is currently dedicated exclusively to <strong>Pincode 802301 (Arrah, Bhojpur, Bihar)</strong>.
+                          </p>
+                        </div>
+
+                        <div className="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPincodeInput('802301');
+                              const m = SERVICEABLE_PINCODES['802301'];
+                              setPincodeResult({
+                                text: `⚡ High Fleet Density: ${m.phlebosActive} Phlebotomists active near ${m.area} (${m.city}). Guaranteed doorstep collection in ${m.etaMins} mins.`,
+                                isAvailable: true,
+                                area: `${m.area}, ${m.city} - 802301`,
+                                eta: m.etaMins
+                              });
+                            }}
+                            className="flex-1 px-4 py-2.5 rounded-xl bg-[#005f5e] hover:bg-[#007a78] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-sm">restart_alt</span>
+                            <span>Set to Supported Pincode 802301</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConsultModalOpen(true)}
+                            className="px-4 py-2.5 rounded-xl bg-[#006398] hover:bg-[#004d77] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95 cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-sm">medical_services</span>
+                            <span>Consult Pathologist Online</span>
+                          </button>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
               </div>
@@ -1890,6 +1935,9 @@ export default function App() {
         onOpenTracker={() => setTrackerModalOpen(true)}
       />
 
+      <AccountMenu />
+      <TestingNoticeModal open={noticeOpen} fromBooking={noticeFromBooking} onClose={() => { setNoticeOpen(false); setNoticeFromBooking(false); }} />
+
       {/* MODAL SCREENS */}
       <BookingModal
         isOpen={bookingModalOpen}
@@ -1897,9 +1945,9 @@ export default function App() {
         defaultPackageName={selectedPackageForBooking}
         onBookingConfirmed={(bookingId) => {
           setActiveBookingId(bookingId);
-          showToast(`Phlebotomist dispatched for ${bookingId}`);
-          setTrackerModalOpen(true);
+          showToast(`Booking ${bookingId} confirmed. Awaiting sample collection.`);
         }}
+        onLaunchTracker={() => setTrackerModalOpen(true)}
       />
 
       <ReportViewerModal

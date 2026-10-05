@@ -486,9 +486,9 @@ export const DEMO_PATIENT_REPORT: PatientReportData = {
   gender: 'Male',
   collectionTime: 'Today at 07:15 AM (Doorstep Collection)',
   reportingTime: 'Today at 01:45 PM (Dual Validation Co-Signed)',
-  referredBy: 'Dr. Rajesh Varma, MD (Chief Oncologist)',
-  pathologist: 'Dr. Aris Thorne, MD Path (CAP Lead Assayer)',
-  coSigner: 'Dr. Sarah Chen, PhD (Clinical Biochemist)',
+  referredBy: 'Dr. Anil Kumar Singh, MD (Chief Consultant)',
+  pathologist: 'Dr. Anil Kumar Singh, MD Path (Chief Clinical Pathologist & Lab Director)',
+  coSigner: 'Dr. Sarah Chen, PhD (Clinical Biochemist & QA Officer)',
   coldChainTemperature: 4.1, // °C
   biomarkers: [
     {
@@ -646,6 +646,8 @@ export const DEFAULT_USER_ADDRESS = {
   fullAddress: 'BDO block club road near parwati chandra hotel, Arrah, Bihar - 802301, India'
 };
 
+export const ACCEPTED_HOME_COLLECTION_PINCODE = '802301';
+
 export const SERVICEABLE_PINCODES: Record<string, { city: string; area: string; phlebosActive: number; nearestHub: string; etaMins: number }> = {
   '802301': { 
     city: 'Arrah, Bhojpur (Bihar, India)', 
@@ -653,11 +655,6 @@ export const SERVICEABLE_PINCODES: Record<string, { city: string; area: string; 
     phlebosActive: 5, 
     nearestHub: 'ReZone Bihar Regional Diagnostics Hub #12', 
     etaMins: 28 
-  },
-  '10001': { city: 'New York', area: 'Midtown Manhattan', phlebosActive: 6, nearestHub: 'Central Lab Hub #1 (5th Ave)', etaMins: 32 },
-  '90210': { city: 'Beverly Hills', area: 'Rodeo / Sunset Corridor', phlebosActive: 4, nearestHub: 'West LA Precision Station', etaMins: 38 },
-  '400001': { city: 'Mumbai', area: 'Fort & Colaba Zone', phlebosActive: 5, nearestHub: 'Marine Lines Robotic Node', etaMins: 28 },
-  '110001': { city: 'New Delhi', area: 'Connaught Place / Central', phlebosActive: 7, nearestHub: 'Barakhamba Central Terminal', etaMins: 25 },
-  '560001': { city: 'Bengaluru', area: 'MG Road / Indiranagar', phlebosActive: 8, nearestHub: 'Koramangala Genomic Center', etaMins: 30 },
-  '700001': { city: 'Kolkata', area: 'Dalhousie / Park Street', phlebosActive: 4, nearestHub: 'Salt Lake Molecular Lab', etaMins: 34 }
+  }
 };
+

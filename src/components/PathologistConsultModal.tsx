@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getWhatsAppDoctorConsultUrl, WHATSAPP_DISPLAY } from '../utils/whatsapp';
 
 interface PathologistConsultModalProps {
   isOpen: boolean;
@@ -15,10 +16,72 @@ export const PathologistConsultModal: React.FC<PathologistConsultModalProps> = (
   const [mode, setMode] = useState<'video' | 'phone' | 'report'>('video');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [notes, setNotes] = useState('');
   const [slot, setSlot] = useState('Today at 04:30 PM');
   const [booked, setBooked] = useState(false);
 
+  // Dropped GPS location state
+  const [droppedLocation, setDroppedLocation] = useState<{
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    mapsUrl: string;
+  } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState<string | null>(null);
+
   if (!isOpen) return null;
+
+  const doctorName = selectedSpecialist === 'oncology' ? 'Dr. Anil Kumar Singh' : 'Dr. Sarah Chen, PhD';
+  const specialistTitle = selectedSpecialist === 'oncology' 
+    ? 'MD Pathology — Senior Clinical Pathologist & Lab Director' 
+    : 'Clinical Biochemistry & Metabolic Consultant';
+
+  const handleDropLocation = () => {
+    setIsLocating(true);
+    setLocationNote(null);
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = Number(pos.coords.latitude.toFixed(6));
+          const lng = Number(pos.coords.longitude.toFixed(6));
+          const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+          setDroppedLocation({
+            lat,
+            lng,
+            accuracy: Math.round(pos.coords.accuracy),
+            mapsUrl
+          });
+          setLocationNote('Live location dropped! Google Maps link attached for Doctor.');
+          setIsLocating(false);
+        },
+        (_err) => {
+          const lat = 25.556041;
+          const lng = 84.660332;
+          const mapsUrl = `https://maps.google.com/?q=${lat},${lng}`;
+          setDroppedLocation({
+            lat,
+            lng,
+            mapsUrl
+          });
+          setLocationNote('GPS sensor unavailable. Attached Arrah Hub coordinates (25.5560° N, 84.6603° E).');
+          setIsLocating(false);
+        },
+        { enableHighAccuracy: true, timeout: 7000 }
+      );
+    } else {
+      const lat = 25.556041;
+      const lng = 84.660332;
+      setDroppedLocation({
+        lat,
+        lng,
+        mapsUrl: `https://maps.google.com/?q=${lat},${lng}`
+      });
+      setLocationNote('Attached Arrah Hub coordinates (25.5560° N, 84.6603° E).');
+      setIsLocating(false);
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +90,18 @@ export const PathologistConsultModal: React.FC<PathologistConsultModalProps> = (
       onConsultBooked();
     }, 1500);
   };
+
+  const whatsappUrl = getWhatsAppDoctorConsultUrl({
+    doctorName,
+    specialistTitle,
+    patientName: name,
+    phone,
+    slot,
+    mode: mode === 'video' ? 'Video Call Consultation' : mode === 'phone' ? 'Phone Call Consultation' : 'Written Review Note',
+    address,
+    locationUrl: droppedLocation?.mapsUrl,
+    notes
+  });
 
   return (
     <div className="fixed inset-0 z-50 bg-[#131b2e]/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
@@ -45,17 +120,28 @@ export const PathologistConsultModal: React.FC<PathologistConsultModalProps> = (
             </div>
             <h3 className="text-xl font-bold text-[#131b2e]">Tele-Consultation Scheduled</h3>
             <p className="text-xs text-[#3e4948]">
-              Your complimentary session with <strong>{selectedSpecialist === 'oncology' ? 'Dr. Rajesh Varma, MD' : 'Dr. Sarah Chen, PhD'}</strong> is confirmed for <strong>{slot}</strong>.
+              Your complimentary session with <strong>{doctorName}</strong> is confirmed for <strong>{slot}</strong>.
             </p>
             <p className="text-[11px] text-[#6e7978]">
               A secure encrypted video link has been dispatched to {phone || 'your registered number'}.
             </p>
-            <button
-              onClick={onClose}
-              className="mt-3 px-5 py-2.5 rounded-lg bg-[#005f5e] text-white text-xs font-bold"
-            >
-              Done
-            </button>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-4 py-2.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5"
+              >
+                <span className="material-symbols-outlined text-base">chat</span>
+                <span>Send to Doctor via WhatsApp ({WHATSAPP_DISPLAY})</span>
+              </a>
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 rounded-lg bg-[#005f5e] hover:bg-[#007a78] text-white text-xs font-bold transition-all"
+              >
+                Done
+              </button>
+            </div>
           </div>
         ) : (
           <div>
@@ -90,8 +176,8 @@ export const PathologistConsultModal: React.FC<PathologistConsultModalProps> = (
                         : 'border-[#eaedff] bg-[#f2f3ff]'
                     }`}
                   >
-                    <div className="text-xs font-bold text-[#131b2e]">Dr. Rajesh Varma, MD</div>
-                    <div className="text-[10px] text-[#3e4948]">Medical Oncology & Internal Diagnostics</div>
+                    <div className="text-xs font-bold text-[#131b2e]">Dr. Anil Kumar Singh</div>
+                    <div className="text-[10px] text-[#3e4948]">MD Pathology — Senior Lab Director</div>
                   </button>
 
                   <button
@@ -193,13 +279,98 @@ export const PathologistConsultModal: React.FC<PathologistConsultModalProps> = (
                 </select>
               </div>
 
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-lg bg-[#006242] hover:bg-[#007d55] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5"
-              >
-                <span className="material-symbols-outlined text-base">event_available</span>
-                <span>Confirm Free Pathologist Consultation</span>
-              </button>
+              {/* Patient Location & GPS Drop */}
+              <div className="bg-[#f8fafe] p-3 rounded-xl border border-[#dae2fd] space-y-2">
+                <div className="flex items-center justify-between flex-wrap gap-1">
+                  <label className="block text-[11px] font-bold text-[#131b2e] uppercase tracking-wider">
+                    Patient Location & Landmark
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleDropLocation}
+                    disabled={isLocating}
+                    className="text-[11px] font-bold text-white bg-[#005f5e] hover:bg-[#007a78] px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer"
+                  >
+                    <span className={`material-symbols-outlined text-sm ${isLocating ? 'animate-spin' : ''}`}>
+                      {isLocating ? 'progress_activity' : 'my_location'}
+                    </span>
+                    <span>{isLocating ? 'Detecting GPS...' : '📍 Drop My Location'}</span>
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="e.g. BDO block club road near parwati chandra hotel, Arrah, Bihar - 802301, India"
+                  className="w-full px-3 py-2 bg-white rounded-lg text-xs text-[#131b2e] border border-[#bdc9c8] focus:outline-none focus:ring-2 focus:ring-[#005f5e]"
+                />
+
+                {droppedLocation && (
+                  <div className="p-2 bg-emerald-50 border border-emerald-300 rounded-lg text-xs text-emerald-950 flex items-center justify-between gap-2 animate-in fade-in">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <span className="material-symbols-outlined text-emerald-700 text-base shrink-0">pin_drop</span>
+                      <div className="truncate">
+                        <span className="font-bold text-emerald-900">GPS Pinned: </span>
+                        <span className="font-mono text-[11px] text-emerald-800">
+                          {droppedLocation.lat.toFixed(4)}, {droppedLocation.lng.toFixed(4)}
+                        </span>
+                      </div>
+                    </div>
+                    <a
+                      href={droppedLocation.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline shrink-0 flex items-center gap-0.5"
+                    >
+                      <span>Preview Map</span>
+                      <span className="material-symbols-outlined text-xs">open_in_new</span>
+                    </a>
+                  </div>
+                )}
+
+                {locationNote && (
+                  <p className="text-[10px] text-emerald-700 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">info</span>
+                    <span>{locationNote}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Consultation Notes */}
+              <div>
+                <label className="block text-[11px] font-medium text-[#3e4948] mb-0.5">
+                  Reason for Consultation / Doctor Notes (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="e.g. Discuss elevated blood sugar & lipid panel report..."
+                  className="w-full px-3 py-2 bg-[#f2f3ff] rounded-lg text-xs text-[#131b2e] border border-[#bdc9c8] focus:outline-none focus:ring-2 focus:ring-[#005f5e]"
+                />
+              </div>
+
+              {/* Action Buttons: WhatsApp & Direct Booking */}
+              <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 py-2.5 px-3 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 text-center cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-base">chat</span>
+                  <span>Send Location & Consult on WhatsApp</span>
+                </a>
+
+                <button
+                  type="submit"
+                  className="py-2.5 px-4 rounded-lg bg-[#006242] hover:bg-[#007d55] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-base">event_available</span>
+                  <span>Confirm Slot</span>
+                </button>
+              </div>
             </form>
           </div>
         )}

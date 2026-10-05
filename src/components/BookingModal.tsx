@@ -1,35 +1,60 @@
-import React, { useState } from 'react';
-import { HEALTH_PACKAGES, POPULAR_TESTS, SERVICEABLE_PINCODES } from '../data/mockData';
-import { getWhatsAppBookingUrl, WHATSAPP_DISPLAY } from '../utils/whatsapp';
+import React, { useState, useEffect } from 'react';
+import { HEALTH_PACKAGES, POPULAR_TESTS, SERVICEABLE_PINCODES, ACCEPTED_HOME_COLLECTION_PINCODE } from '../data/mockData';
+import { getWhatsAppBookingUrl, WHATSAPP_DISPLAY, BOOKING_CALL_NUMBER, BOOKING_CALL_DISPLAY, DOCTOR_NAME, DOCTOR_TITLE } from '../utils/whatsapp';
+import { useDB, currentUser, createBooking } from '../utils/store';
+import { BookingStatusCard } from './BookingStatusCard';
+import { AuthModal } from './AuthModal';
 
 interface BookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultPackageName?: string;
   onBookingConfirmed: (bookingId: string) => void;
+  onLaunchTracker?: () => void;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
   isOpen,
   onClose,
   defaultPackageName,
-  onBookingConfirmed
+  onBookingConfirmed,
+  onLaunchTracker
 }) => {
   const [selectedItem, setSelectedItem] = useState(defaultPackageName || 'ReZone Comprehensive Vital Plus');
   const [patientName, setPatientName] = useState('');
   const [age, setAge] = useState('');
   const [gender, setGender] = useState<'Male' | 'Female' | 'Other'>('Male');
   const [mobile, setMobile] = useState('');
-  const [pincode, setPincode] = useState('802301');
-  const [address, setAddress] = useState('BDO block club road near parwati chandra hotel, Arrah, Bihar');
+  const [pincode, setPincode] = useState('');
+  const [address, setAddress] = useState('');
+  const [locationFailed, setLocationFailed] = useState(false);
   const [slotType, setSlotType] = useState<'45min' | 'morning' | 'evening'>('45min');
   const [fastingConfirmed, setFastingConfirmed] = useState(true);
-  const [femalePhlebo, setFemalePhlebo] = useState(false);
   const [hardCopy, setHardCopy] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
 
+  // Dropped GPS location state
+  const [droppedLocation, setDroppedLocation] = useState<{
+    lat: number;
+    lng: number;
+    accuracy?: number;
+    mapsUrl: string;
+  } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState<string | null>(null);
+
+  const db = useDB();
+  const user = currentUser(db);
+  useEffect(() => {
+    if (user && user.role === 'patient') {
+      setPatientName(n => n || user.name);
+      setMobile(m => m || user.phone);
+    }
+  }, [user?.id]);
+
   if (!isOpen) return null;
+  if (!user || user.role !== 'patient') return <AuthModal isOpen onClose={onClose} onSuccess={() => {}} />;
 
   // Find item price
   const matchedPkg = HEALTH_PACKAGES.find(p => p.name.toLowerCase() === selectedItem.toLowerCase());
@@ -38,31 +63,72 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const originalPrice = matchedPkg ? matchedPkg.originalPrice : (matchedTest ? matchedTest.originalPrice : 1999);
   const totalPrice = price + (hardCopy ? 50 : 0);
 
+  // Strict pincode 802301 check
+  const isServiceablePincode = pincode.trim() === ACCEPTED_HOME_COLLECTION_PINCODE;
+  const pincodeInfo = isServiceablePincode ? SERVICEABLE_PINCODES['802301'] : null;
 
-  const pincodeInfo = SERVICEABLE_PINCODES[pincode] || {
-    city: 'Metro Zone',
-    area: 'Central District',
-    phlebosActive: 4,
-    nearestHub: 'ReZone Rapid Center #4',
-    etaMins: 36
+  const fillFromCoords = async (lat: number, lng: number) => {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}`);
+      const j = await r.json();
+      if (j?.display_name) setAddress(a => (a.trim() ? a : j.display_name));
+      const pc = j?.address?.postcode;
+      if (pc) setPincode(p => (p.trim() ? p : String(pc).replace(/\s/g, '')));
+    } catch { /* address lookup is optional */ }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleDropLocation = () => {
+    setLocationNote(null);
+    setLocationFailed(false);
+    if (!('geolocation' in navigator)) {
+      setLocationFailed(true);
+      setLocationNote('Your browser cannot share GPS. Please type your full address instead.');
+      return;
+    }
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = Number(pos.coords.latitude.toFixed(6));
+        const lng = Number(pos.coords.longitude.toFixed(6));
+        setDroppedLocation({ lat, lng, accuracy: Math.round(pos.coords.accuracy), mapsUrl: `https://maps.google.com/?q=${lat},${lng}` });
+        setLocationNote(`Your exact GPS pin is attached (accurate to about ${Math.round(pos.coords.accuracy)} m). Please check the address above.`);
+        setIsLocating(false);
+        fillFromCoords(lat, lng);
+      },
+      (error) => {
+        setDroppedLocation(null);
+        setLocationFailed(true);
+        setLocationNote(error.code === 1
+          ? 'Location permission is blocked. Allow location access for this site in your browser, then tap the button again, or type your address.'
+          : 'Could not get your location. Please type your full address.');
+        setIsLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isServiceablePincode) return;
+    if (address.trim().length < 10) return alert('Please enter your full address (house no., street, landmark, area).');
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const generatedId = `RZ-BK-${Math.floor(100000 + Math.random() * 900000)}`;
-      setBookingSuccess(generatedId);
-    }, 1200);
+    const r = await createBooking({
+      userId: user.id, patientName: patientName.trim() || user.name, age, gender,
+      mobile: mobile || user.phone, packageName: selectedItem, totalPrice,
+      address: address.trim(), pincode: pincode.trim(),
+      latitude: droppedLocation?.lat, longitude: droppedLocation?.lng
+    });
+    setIsSubmitting(false);
+    if (!r.ok) return alert(r.error);
+    setBookingSuccess(r.booking.id);
+    onBookingConfirmed(r.booking.id);
   };
+
 
   const handleFinish = () => {
-    if (bookingSuccess) {
-      onBookingConfirmed(bookingSuccess);
-    }
     setBookingSuccess(null);
     onClose();
+    onLaunchTracker?.();
   };
 
   return (
@@ -99,7 +165,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[#3e4948]">Estimated Arrival Time:</span>
-                <span className="font-bold text-[#006242]">{pincodeInfo.etaMins} Minutes (Sterile Sealed Kit)</span>
+                <span className="font-bold text-[#006242]">{pincodeInfo?.etaMins || 28} Minutes (Sterile Sealed Kit)</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-[#3e4948]">Specimen Vault ID:</span>
@@ -111,6 +177,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               </div>
             </div>
 
+            <BookingStatusCard bookingId={bookingSuccess} />
 
             <p className="text-[11px] text-[#6e7978]">
               SMS & WhatsApp notification with real-time phlebotomist GPS link sent to {mobile || '+1 (555) 019-2831'}.
@@ -134,6 +201,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <h3 className="text-xl font-bold text-[#131b2e]">Book Doorstep Blood Collection</h3>
                 <p className="text-xs text-[#3e4948]">Painless vacuum blood collection in 45 minutes by certified medical staff</p>
               </div>
+            </div>
+
+            <div className="mb-4 p-3 rounded-xl bg-[#f2f3ff] border border-[#eaedff] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-[#005f5e] text-white flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-lg">stethoscope</span>
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-[#131b2e]">{DOCTOR_NAME}</div>
+                  <div className="text-[10px] text-[#3e4948]">{DOCTOR_TITLE}</div>
+                </div>
+              </div>
+              <a
+                href={`tel:+91${BOOKING_CALL_NUMBER}`}
+                className="px-3.5 py-2 rounded-lg bg-white border border-[#005f5e] text-[#005f5e] hover:bg-[#005f5e] hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <span className="material-symbols-outlined text-base">call</span>
+                <span>Call to Book: {BOOKING_CALL_DISPLAY}</span>
+              </a>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
@@ -380,35 +466,105 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 </div>
                 <div>
                   <label className="block text-[11px] font-medium text-[#3e4948] mb-0.5">Service Zone Status</label>
-                  <div className="px-2.5 py-2 bg-[#eaedff] rounded-lg text-[10px] text-[#006398] font-semibold flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#006242] animate-ping"></span>
-                    <span>{pincodeInfo.phlebosActive} Phlebotomists Active ({pincodeInfo.etaMins}m ETA)</span>
-                  </div>
+                  {isServiceablePincode ? (
+                    <div className="px-2.5 py-2 bg-[#eaedff] rounded-lg text-[10px] text-[#006398] font-semibold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#006242] animate-ping"></span>
+                      <span>{pincodeInfo?.phlebosActive} Phlebotomists Active ({pincodeInfo?.etaMins}m ETA)</span>
+                    </div>
+                  ) : (
+                    <div className="px-2.5 py-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+                      <span>Not Serviceable (Only 802301)</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
+              {/* Strict Pincode Restriction Warning */}
+              {pincode.trim() !== '' && !isServiceablePincode && (
+                <div className="p-3 bg-red-50 border-2 border-red-300 rounded-xl text-xs text-red-900 flex items-start gap-2.5 animate-in fade-in">
+                  <span className="material-symbols-outlined text-red-600 text-xl shrink-0 mt-0.5">cancel</span>
+                  <div className="flex-1">
+                    <div className="font-extrabold text-red-900">
+                      Home collection is ONLY available for pincode 802301 (Arrah, Bihar).
+                    </div>
+                    <p className="text-[11px] text-red-700 mt-0.5 leading-snug">
+                      Pincode "{pincode}" is not acceptable for home collection. Doorstep visits cannot be dispatched outside 802301.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPincode('802301');
+                      }}
+                      className="mt-2 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 shadow-sm transition-colors cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-sm">check_circle</span>
+                      <span>Use Pincode 802301 (Serviceable Area)</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Doorstep Address & Location Drop */}
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-[11px] font-medium text-[#3e4948]">Doorstep Address / Landmark</label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddress('BDO block club road near parwati chandra hotel, Arrah, Bihar');
-                      setPincode('802301');
-                    }}
-                    className="text-[10px] text-[#006398] hover:underline font-bold flex items-center gap-0.5"
-                  >
-                    <span>Use: BDO block club road (802301)</span>
-                  </button>
+                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                  <label className="block text-[11px] font-medium text-[#3e4948]">Your Address / Landmark (where we collect the sample)</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleDropLocation}
+                      disabled={isLocating}
+                      className="text-[11px] font-bold text-white bg-[#005f5e] hover:bg-[#007a78] px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all shadow-sm active:scale-95 cursor-pointer"
+                      title="Pin your current location and send via WhatsApp"
+                    >
+                      <span className={`material-symbols-outlined text-sm ${isLocating ? 'animate-spin' : ''}`}>
+                        {isLocating ? 'progress_activity' : 'my_location'}
+                      </span>
+                      <span>{isLocating ? 'Detecting GPS...' : '📍 Drop My Location'}</span>
+                    </button>
+                  </div>
                 </div>
                 <input
                   type="text"
                   required
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Apartment #, Building name, Street address"
+                  placeholder="House no., street, landmark, area, city"
                   className="w-full px-3 py-2 bg-[#f2f3ff] rounded-lg text-xs text-[#131b2e] border border-[#bdc9c8] focus:outline-none focus:ring-2 focus:ring-[#005f5e]"
                 />
+
+                <p className="text-[10px] text-[#6e7978] mt-1">Type your full address, then tap Drop My Location so our phlebotomist can find your exact spot.</p>
+
+                {/* Dropped Location Confirmation Chip */}
+                {droppedLocation && (
+                  <div className="mt-2 p-2.5 bg-emerald-50 border border-emerald-300 rounded-lg text-xs text-emerald-950 flex items-center justify-between gap-2 animate-in fade-in">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      <span className="material-symbols-outlined text-emerald-700 text-base shrink-0">pin_drop</span>
+                      <div className="truncate">
+                        <span className="font-bold text-emerald-900">GPS Location Dropped: </span>
+                        <span className="font-mono text-[11px] text-emerald-800">
+                          {droppedLocation.lat.toFixed(4)}, {droppedLocation.lng.toFixed(4)}
+                        </span>
+                      </div>
+                    </div>
+                    <a
+                      href={droppedLocation.mapsUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-900 underline shrink-0 flex items-center gap-0.5"
+                    >
+                      <span>Preview Map</span>
+                      <span className="material-symbols-outlined text-xs">open_in_new</span>
+                    </a>
+                  </div>
+                )}
+
+                {locationNote && (
+                  <p className={`text-[10px] mt-1 flex items-center gap-1 ${locationFailed ? 'text-[#ba1a1a]' : 'text-emerald-700'}`}>
+                    <span className="material-symbols-outlined text-xs">info</span>
+                    <span>{locationNote}</span>
+                  </p>
+                )}
               </div>
 
               {/* Preferences */}
@@ -421,15 +577,6 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     className="w-4 h-4 rounded text-[#005f5e] focus:ring-[#005f5e]"
                   />
                   <span>Patient is informed regarding water-only fasting requirements</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer text-[#3e4948]">
-                  <input
-                    type="checkbox"
-                    checked={femalePhlebo}
-                    onChange={(e) => setFemalePhlebo(e.target.checked)}
-                    className="w-4 h-4 rounded text-[#005f5e] focus:ring-[#005f5e]"
-                  />
-                  <span>Prefer certified Female Phlebotomist for home collection</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer text-[#3e4948]">
                   <input
@@ -457,29 +604,40 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   </div>
                 </div>
 
-
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <a
-                    href={getWhatsAppBookingUrl({
-                      packageName: selectedItem,
-                      slot: slotType === '45min' ? '45-Min Express Slot' : slotType === 'morning' ? 'Morning Fasting (6:30 - 9:30 AM)' : 'Custom Slot',
-                      address: address,
-                      pincode: pincode,
-                      patientName: patientName
-                    })}
-                    target="_blank"
+                    href={
+                      isServiceablePincode
+                        ? getWhatsAppBookingUrl({
+                            packageName: selectedItem,
+                            slot: slotType === '45min' ? '45-Min Express Slot' : slotType === 'morning' ? 'Morning Fasting (6:30 - 9:30 AM)' : 'Custom Slot',
+                            address: address,
+                            pincode: pincode,
+                            patientName: patientName,
+                            locationUrl: droppedLocation?.mapsUrl
+                          })
+                        : '#'
+                    }
+                    onClick={(e) => {
+                      if (!isServiceablePincode) {
+                        e.preventDefault();
+                        alert('Home collection is ONLY available for pincode 802301. Other pincodes are not acceptable.');
+                      }
+                    }}
+                    target={isServiceablePincode ? '_blank' : undefined}
                     rel="noopener noreferrer"
-                    className="px-3.5 py-2.5 rounded-lg bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95"
+                    className={`px-3.5 py-2.5 rounded-lg text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 active:scale-95 ${
+                      isServiceablePincode ? 'bg-[#25D366] hover:bg-[#20ba59] cursor-pointer' : 'bg-slate-400 opacity-60 cursor-not-allowed'
+                    }`}
                   >
                     <span className="material-symbols-outlined text-base">chat</span>
                     <span>Book on WhatsApp</span>
                   </a>
 
-
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className="px-5 py-2.5 rounded-lg bg-[#005f5e] hover:bg-[#007a78] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95"
+                    disabled={isSubmitting || !isServiceablePincode}
+                    className="px-5 py-2.5 rounded-lg bg-[#005f5e] hover:bg-[#007a78] text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 cursor-pointer"
                   >
                     {isSubmitting ? (
                       <>

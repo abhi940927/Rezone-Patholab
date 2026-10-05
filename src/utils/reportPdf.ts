@@ -98,8 +98,8 @@ export const generateReportHtml = (report: PatientReportData = DEMO_PATIENT_REPO
 
   <div class="signatures">
     <div class="sig-block">
-      <div class="sig-line">Dr. Aris Thorne, MD Path</div>
-      <div>Head of Molecular Pathology</div>
+      <div class="sig-line">Dr. Anil Kumar Singh, MD Path</div>
+      <div>Chief Clinical Pathologist & Lab Director</div>
       <div style="font-size: 9px; color: #6e7978;">Reg No: DMC-68192 • Digital ID: 992140A-HEX</div>
     </div>
     <div class="sig-block" style="text-align: right;">
@@ -110,7 +110,7 @@ export const generateReportHtml = (report: PatientReportData = DEMO_PATIENT_REPO
   </div>
 
   <div class="footer">
-    *** End of Verified Laboratory Report • Cryptographically Sealed with 256-Bit SHA-256 Hash • Support & Inquiries: WhatsApp +91 9905359191 ***
+    *** End of Verified Laboratory Report • Cryptographically Sealed with 256-Bit SHA-256 Hash • Support & Inquiries: +91 9279816571 / WhatsApp +91 9905359191 ***
   </div>
 
   <script>

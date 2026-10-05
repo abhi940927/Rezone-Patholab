@@ -15,7 +15,7 @@ export const MobileBottomBar: React.FC<MobileBottomBarProps> = ({
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-[#eaedff] px-3 py-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] flex items-center justify-between gap-2 safe-bottom">
       <a
-        href="tel:+919905359191"
+        href="tel:+919279816571"
         className="flex flex-col items-center justify-center p-1.5 rounded-lg text-[#3e4948] hover:text-[#005f5e] active:scale-95 transition-all text-center min-w-[48px]"
       >
         <span className="material-symbols-outlined text-xl text-[#006398]">call</span>

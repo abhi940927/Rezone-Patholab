@@ -73,3 +73,14 @@ export interface BookingFormData {
   femalePhlebotomistPreferred: boolean;
   hardCopyReportNeeded: boolean;
 }
+
+export interface BookingDetails {
+  bookingId: string;
+  specimenId: string;
+  patientName: string;
+  age: string;
+  gender: 'Male' | 'Female' | 'Other';
+  mobile: string;
+  packageName: string;
+  totalPrice: number;
+}
